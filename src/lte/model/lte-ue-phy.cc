@@ -42,6 +42,14 @@
 #include <ns3/boolean.h>
 #include <ns3/lte-ue-power-control.h>
 
+
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <algorithm>
+
+
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("LteUePhy");
@@ -408,6 +416,12 @@ LteUePhy::GetUlSpectrumPhy () const
 }
 
 void
+LteUePhy::SetD2dSpectrumPhy(Ptr<LteSpectrumPhy> d2dPhy) 
+{
+  m_d2dlinkSpectrumPhy = d2dPhy;
+}
+
+void
 LteUePhy::DoSendMacPdu (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this);
@@ -430,7 +444,27 @@ LteUePhy::SetSubChannelsForTransmission (std::vector <int> mask)
   m_subChannelsForTransmission = mask;
 
   Ptr<SpectrumValue> txPsd = CreateTxPowerSpectralDensity ();
+  NS_LOG_INFO(" txPsd  "<<*txPsd);
   m_uplinkSpectrumPhy->SetTxPowerSpectralDensity (txPsd);
+}
+
+void
+LteUePhy::SetSubChannelsForD2dTransmission(std::vector <int> mask)
+{
+  NS_LOG_FUNCTION (this);
+
+  m_subChannelsForD2dTransmission = mask;
+  Ptr<SpectrumValue> d2dtxPsd = CreateTxPowerSpectralDensityD2d();
+  NS_LOG_INFO(" d2dtxPsd  "<<*d2dtxPsd);
+  m_d2dlinkSpectrumPhy->SetTxPowerSpectralDensity (d2dtxPsd);
+
+}
+
+void
+LteUePhy::SetSubChannelsForD2dReception (std::vector <int> mask)
+{
+  NS_LOG_FUNCTION (this);
+  m_subChannelsForD2dReception = mask;
 }
 
 
@@ -440,6 +474,24 @@ LteUePhy::SetSubChannelsForReception (std::vector <int> mask)
   NS_LOG_FUNCTION (this);
   m_subChannelsForReception = mask;
 }
+
+
+std::vector <int>
+LteUePhy::GetSubChannelsForD2dTransmission ()
+{
+  NS_LOG_FUNCTION (this);
+  return m_subChannelsForD2dTransmission;
+}
+
+
+std::vector <int>
+LteUePhy::GetSubChannelsForD2dReception ()
+{
+  NS_LOG_FUNCTION (this);
+  return m_subChannelsForD2dReception;
+}
+
+
 
 
 std::vector <int>
@@ -458,15 +510,46 @@ LteUePhy::GetSubChannelsForReception ()
 }
 
 
+std::string int_vec_to_str(std::vector<int> my_vector) 
+{
+  std::stringstream rlt;
+  for(unsigned int i=0;i<my_vector.size();i++) {
+    if(i!=my_vector.size()) {
+      rlt<<my_vector[i]<<", ";
+    } else {
+      rlt<<my_vector[i];
+    }
+  }
+  return rlt.str();
+}
+
+
 Ptr<SpectrumValue>
 LteUePhy::CreateTxPowerSpectralDensity ()
 {
-  NS_LOG_FUNCTION (this);
+  std::string rbstr = int_vec_to_str(GetSubChannelsForTransmission());
+  NS_LOG_FUNCTION (this<<" m_ulEarfcn "<<m_ulEarfcn<<" m_ulBandwidth "<< (uint16_t) m_ulBandwidth<<" m_txPower "<<m_txPower<<"rbs"<<rbstr);
   LteSpectrumValueHelper psdHelper;
   Ptr<SpectrumValue> psd = psdHelper.CreateTxPowerSpectralDensity (m_ulEarfcn, m_ulBandwidth, m_txPower, GetSubChannelsForTransmission ());
 
   return psd;
 }
+
+
+
+Ptr<SpectrumValue>
+LteUePhy::CreateTxPowerSpectralDensityD2d ()
+{
+  std::string rbstr = int_vec_to_str(GetSubChannelsForD2dTransmission());
+  NS_LOG_FUNCTION (this<<"rbs"<<rbstr);
+  LteSpectrumValueHelper psdHelper;
+  Ptr<SpectrumValue> psd = psdHelper.CreateTxPowerSpectralDensity (18100, 25, m_txPower, GetSubChannelsForD2dTransmission ());
+
+  return psd;
+}
+
+
+
 
 void
 LteUePhy::GenerateCtrlCqiReport (const SpectrumValue& sinr)
@@ -911,6 +994,7 @@ LteUePhy::ReceiveLteControlMessageList (std::list<Ptr<LteControlMessage> > msgLi
           for (uint8_t i = 0; i < dci.m_tbsSize.size (); i++)
             {
               m_downlinkSpectrumPhy->AddExpectedTb (dci.m_rnti, dci.m_ndi.at (i), dci.m_tbsSize.at (i), dci.m_mcs.at (i), dlRb, i, dci.m_harqProcess, dci.m_rv.at (i), true /* DL */);
+              m_d2dlinkSpectrumPhy->AddExpectedTb (dci.m_rnti, dci.m_ndi.at (i), dci.m_tbsSize.at (i), dci.m_mcs.at (i), dlRb, i, dci.m_harqProcess, dci.m_rv.at (i), true /* DL */);
             }
 
           SetSubChannelsForReception (dlRb);
@@ -1082,7 +1166,12 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
   m_rsReceivedPowerUpdated = false;
   m_rsInterferencePowerUpdated = false;
   m_pssReceived = false;
-
+  std::vector<int> d2dRb(25,0);
+  for(unsigned int i=0;i<d2dRb.size();i++) {
+    d2dRb[i]=i;
+  }
+  SetSubChannelsForD2dTransmission(d2dRb);
+  SetSubChannelsForD2dReception(d2dRb);
   if (m_ulConfigured)
     {
       // update uplink transmission mask according to previous UL-CQIs
@@ -1122,6 +1211,7 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
               SetSubChannelsForTransmission (rbMask);
             }
           m_uplinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION);
+          m_d2dlinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION);
         }
       else
         {
@@ -1137,7 +1227,9 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
                 }
 
               SetSubChannelsForTransmission (dlRb);
+              NS_LOG_INFO(" dlRb.size()  "<<dlRb.size());
               m_uplinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION);
+             // m_d2dlinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION);
             }
           else
             {
@@ -1218,6 +1310,8 @@ LteUePhy::DoReset ()
   m_sendSrsEvent.Cancel ();
   m_downlinkSpectrumPhy->Reset ();
   m_uplinkSpectrumPhy->Reset ();
+  if(m_d2dlinkSpectrumPhy)
+    m_d2dlinkSpectrumPhy->Reset();
 
 } // end of void LteUePhy::DoReset ()
 
@@ -1251,7 +1345,7 @@ LteUePhy::DoSynchronizeWithEnb (uint16_t cellId)
   m_cellId = cellId;
   m_downlinkSpectrumPhy->SetCellId (cellId);
   m_uplinkSpectrumPhy->SetCellId (cellId);
-
+  m_d2dlinkSpectrumPhy->SetCellId(cellId);
   // configure DL for receiving the BCH with the minimum bandwidth
   DoSetDlBandwidth (6);
 
@@ -1287,14 +1381,26 @@ LteUePhy::DoSetDlBandwidth (uint8_t dlBandwidth)
       m_noisePsd = LteSpectrumValueHelper::CreateNoisePowerSpectralDensity (m_dlEarfcn, m_dlBandwidth, m_noiseFigure);
       m_downlinkSpectrumPhy->SetNoisePowerSpectralDensity (m_noisePsd);
       m_downlinkSpectrumPhy->GetChannel ()->AddRx (m_downlinkSpectrumPhy);
+      Ptr<SpectrumValue> noisePsd = LteSpectrumValueHelper::CreateNoisePowerSpectralDensity (18100, 25, m_noiseFigure);
+      m_d2dlinkSpectrumPhy->SetNoisePowerSpectralDensity (noisePsd);
+      m_d2dlinkSpectrumPhy->GetChannel ()->AddRx (m_d2dlinkSpectrumPhy);
     }
   m_dlConfigured = true;
 }
 
 
+void
+LteUePhy::DoSetD2dBandwidth(uint8_t d2dBandwidth)
+{
+  Ptr<SpectrumValue> noisePsd = LteSpectrumValueHelper::CreateNoisePowerSpectralDensity (18100, 25, m_noiseFigure);
+  m_d2dlinkSpectrumPhy->SetNoisePowerSpectralDensity (noisePsd);
+  m_d2dlinkSpectrumPhy->GetChannel ()->AddRx (m_d2dlinkSpectrumPhy);
+}
+
 void 
 LteUePhy::DoConfigureUplink (uint16_t ulEarfcn, uint8_t ulBandwidth)
 {
+  NS_LOG_FUNCTION (this<<" ulEarfcn  "<<ulEarfcn<<" ulBandwidth "<<ulBandwidth);
   m_ulEarfcn = ulEarfcn;
   m_ulBandwidth = ulBandwidth;
   m_ulConfigured = true;

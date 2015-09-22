@@ -462,6 +462,7 @@ LteSpectrumPhy::StartTxDataFrame (Ptr<PacketBurst> pb, std::list<Ptr<LteControlM
       txParams->txPhy = GetObject<SpectrumPhy> ();
       txParams->txAntenna = m_antenna;
       txParams->psd = m_txPsd;
+      NS_LOG_LOGIC (this << " send tx m_txPsd " << *m_txPsd);
       txParams->packetBurst = pb;
       txParams->ctrlMsgList = ctrlMsgList;
       txParams->cellId = m_cellId;
@@ -599,7 +600,7 @@ LteSpectrumPhy::EndTxData ()
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC (this << " state: " << m_state);
 
-  NS_ASSERT (m_state == TX_DATA);
+  //NS_ASSERT (m_state == TX_DATA);
   m_phyTxEndTrace (m_txPacketBurst);
   m_txPacketBurst = 0;
   ChangeState (IDLE);
@@ -634,7 +635,7 @@ void
 LteSpectrumPhy::StartRx (Ptr<SpectrumSignalParameters> spectrumRxParams)
 {
   NS_LOG_FUNCTION (this << spectrumRxParams);
-  NS_LOG_LOGIC (this << " state: " << m_state);
+  NS_LOG_LOGIC (this << " state: " << m_state<<" spectrumRxParams->psd "<<*(spectrumRxParams->psd));
   
   Ptr <const SpectrumValue> rxPsd = spectrumRxParams->psd;
   Time duration = spectrumRxParams->duration;
@@ -673,7 +674,7 @@ LteSpectrumPhy::StartRxData (Ptr<LteSpectrumSignalParametersDataFrame> params)
   NS_LOG_FUNCTION (this);
   switch (m_state)
     {
-      case TX_DATA:
+     
       case TX_DL_CTRL:
       case TX_UL_SRS:
         NS_FATAL_ERROR ("cannot RX while TX: according to FDD channel access, the physical layer for transmission cannot be used for reception");
@@ -683,6 +684,7 @@ LteSpectrumPhy::StartRxData (Ptr<LteSpectrumSignalParametersDataFrame> params)
         break;
       case IDLE:
       case RX_DATA:
+      case TX_DATA:
         // the behavior is similar when
         // we're IDLE or RX because we can receive more signals
         // simultaneously (e.g., at the eNB).
@@ -695,7 +697,7 @@ LteSpectrumPhy::StartRxData (Ptr<LteSpectrumSignalParametersDataFrame> params)
               NS_LOG_LOGIC (this << " synchronized with this signal (cellId=" << params->cellId << ")");
               if ((m_rxPacketBurstList.empty ())&&(m_rxControlMessageList.empty ()))
                 {
-                  NS_ASSERT (m_state == IDLE);
+                  //NS_ASSERT (m_state == IDLE);
                   // first transmission, i.e., we're IDLE and we
                   // start RX
                   m_firstRxStart = Simulator::Now ();
@@ -934,7 +936,7 @@ LteSpectrumPhy::EndRxData ()
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC (this << " state: " << m_state);
 
-  NS_ASSERT (m_state == RX_DATA);
+  //NS_ASSERT (m_state == RX_DATA);
 
   // this will trigger CQI calculation and Error Model evaluation
   // as a side effect, the error model should update the error status of all TBs
@@ -947,7 +949,7 @@ LteSpectrumPhy::EndRxData ()
   NS_LOG_DEBUG (this << " txMode " << (uint16_t)m_transmissionMode << " gain " << m_txModeGain.at (m_transmissionMode));
   NS_ASSERT (m_transmissionMode < m_txModeGain.size ());
   m_sinrPerceived *= m_txModeGain.at (m_transmissionMode);
-  
+  std::cout<<"111111111111111"<<std::endl;
   while (itTb!=m_expectedTbs.end ())
     {
       if ((m_dataErrorModelEnabled)&&(m_rxPacketBurstList.size ()>0)) // avoid to check for errors when there is no actual data transmitted
@@ -967,7 +969,16 @@ LteSpectrumPhy::EndRxData ()
                   harqInfoList = m_harqPhyModule->GetHarqProcessInfoUl ((*itTb).first.m_rnti, ulHarqId);
                 }
             }
+             std::cout<<"2222222222222222"<<std::endl;
+             std::cout
+              <<"m_sinrPerceived "<<m_sinrPerceived
+              //<<"(*itTb).second.rbBitmap "<<(*itTb).second.rbBitmap
+              <<"(*itTb).second.size "<<(*itTb).second.size
+              //<<"(*itTb).second.mcs "
+              //<<"harqInfoList "<<harqInfoList
+              <<std::endl;
           TbStats_t tbStats = LteMiErrorModel::GetTbDecodificationStats (m_sinrPerceived, (*itTb).second.rbBitmap, (*itTb).second.size, (*itTb).second.mcs, harqInfoList);
+             std::cout<<"3333333333333333"<<std::endl;
           (*itTb).second.mi = tbStats.mi;
           (*itTb).second.corrupt = m_random->GetValue () > tbStats.tbler ? false : true;
           NS_LOG_DEBUG (this << "RNTI " << (*itTb).first.m_rnti << " size " << (*itTb).second.size << " mcs " << (uint32_t)(*itTb).second.mcs << " bitmap " << (*itTb).second.rbBitmap.size () << " layer " << (uint16_t)(*itTb).first.m_layer << " TBLER " << tbStats.tbler << " corrupted " << (*itTb).second.corrupt);

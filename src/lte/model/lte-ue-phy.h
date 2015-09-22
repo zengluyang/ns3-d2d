@@ -149,11 +149,14 @@ public:
    */
   Ptr<LteSpectrumPhy> GetUlSpectrumPhy () const;
 
+  void SetD2dSpectrumPhy(Ptr<LteSpectrumPhy> d2dPhy);
+
   /**
    * \brief Create the PSD for the TX
    * \return the pointer to the PSD
    */
   virtual Ptr<SpectrumValue> CreateTxPowerSpectralDensity ();
+  Ptr<SpectrumValue> CreateTxPowerSpectralDensityD2d ();
 
   /**
    * \brief Set a list of sub channels to use in TX
@@ -176,6 +179,12 @@ public:
    * \return a list of sub channels
    */
   std::vector <int> GetSubChannelsForReception (void);
+
+
+  void SetSubChannelsForD2dTransmission (std::vector <int> mask);
+  std::vector <int> GetSubChannelsForD2dTransmission (void);
+  void SetSubChannelsForD2dReception (std::vector <int> mask);
+  std::vector <int> GetSubChannelsForD2dReception (void);
 
   /**
   * \brief Create the DL CQI feedback from SINR values perceived at
@@ -320,7 +329,7 @@ private:
   void DoSetTransmissionMode (uint8_t txMode);
   void DoSetSrsConfigurationIndex (uint16_t srcCi);
   void DoSetPa (double pa);
-
+  void DoSetD2dBandwidth(uint8_t d2dBandwidth);
   // UE PHY SAP methods 
   virtual void DoSendMacPdu (Ptr<Packet> p);
   virtual void DoSendLteControlMessage (Ptr<LteControlMessage> msg);
@@ -330,6 +339,12 @@ private:
   std::vector <int> m_subChannelsForTransmission;
   /// A list of sub channels to use in RX.
   std::vector <int> m_subChannelsForReception;
+
+  /// A list of sub channels to use in D2D TX.
+  std::vector <int> m_subChannelsForD2dTransmission;
+  /// A list of sub channels to use in D2D RX.
+  std::vector <int> m_subChannelsForD2dReception;
+
 
   std::vector< std::vector <int> > m_subChannelsForTransmissionQueue;
 
@@ -472,6 +487,7 @@ private:
   
   Ptr<SpectrumValue> m_noisePsd; ///< Noise power spectral density for
                                  ///the configured bandwidth 
+  Ptr<LteSpectrumPhy> m_d2dlinkSpectrumPhy;
 
 }; // end of `class LteUePhy`
 
