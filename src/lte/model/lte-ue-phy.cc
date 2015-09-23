@@ -433,6 +433,7 @@ LteUePhy::DoSendMacPdu (Ptr<Packet> p)
 void
 LteUePhy::PhyPduReceived (Ptr<Packet> p)
 {
+  NS_LOG_FUNCTION (this<<(*p));
   m_uePhySapUser->ReceivePhyPdu (p);
 }
 
@@ -1177,7 +1178,7 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
       // update uplink transmission mask according to previous UL-CQIs
       std::vector <int> rbMask = m_subChannelsForTransmissionQueue.at (0);
       SetSubChannelsForTransmission (m_subChannelsForTransmissionQueue.at (0));
-
+      NS_LOG_INFO(" m_rnti "<<m_rnti<<" rbMask "<<int_vec_to_str(rbMask));
       // shift the queue
       for (uint8_t i = 1; i < m_macChTtiDelay; i++)
         {
@@ -1211,7 +1212,7 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
               SetSubChannelsForTransmission (rbMask);
             }
           m_uplinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION);
-          m_d2dlinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION);
+          //m_d2dlinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION);
         }
       else
         {
