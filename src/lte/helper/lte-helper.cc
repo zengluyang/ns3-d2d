@@ -87,6 +87,7 @@ LteHelper::DoInitialize (void)
   NS_LOG_FUNCTION (this);
   m_downlinkChannel = m_channelFactory.Create<SpectrumChannel> ();
   m_uplinkChannel = m_channelFactory.Create<SpectrumChannel> ();
+  m_d2dChannel = m_channelFactory.Create<SpectrumChannel> ();
 
   m_downlinkPathlossModel = m_dlPathlossModelFactory.Create ();
   Ptr<SpectrumPropagationLossModel> dlSplm = m_downlinkPathlossModel->GetObject<SpectrumPropagationLossModel> ();
@@ -117,6 +118,23 @@ LteHelper::DoInitialize (void)
       NS_ASSERT_MSG (ulPlm != 0, " " << m_uplinkPathlossModel << " is neither PropagationLossModel nor SpectrumPropagationLossModel");
       m_uplinkChannel->AddPropagationLossModel (ulPlm);
     }
+
+  m_d2dPathlossModel = m_d2dPathlossModelFactory.Create (); 
+  Ptr<SpectrumPropagationLossModel> d2dSplm = m_d2dPathlossModel->GetObject<SpectrumPropagationLossModel> ();
+  if (d2dSplm != 0)
+    {
+      NS_LOG_LOGIC (this << " using a SpectrumPropagationLossModel in D2D");
+      m_d2dChannel->AddSpectrumPropagationLossModel (d2dSplm);
+    }
+  else
+    {
+      NS_LOG_LOGIC (this << " using a PropagationLossModel in D2D");
+      Ptr<PropagationLossModel> d2dSplm = m_d2dPathlossModel->GetObject<PropagationLossModel> ();
+      NS_ASSERT_MSG (d2dSplm != 0, " " << m_d2dPathlossModel << " is neither PropagationLossModel nor SpectrumPropagationLossModel");
+      m_d2dChannel->AddPropagationLossModel (d2dSplm);
+    }
+
+
   if (!m_fadingModelType.empty ())
     {
       m_fadingModule = m_fadingModelFactory.Create<SpectrumPropagationLossModel> ();
@@ -210,6 +228,7 @@ LteHelper::DoDispose ()
   NS_LOG_FUNCTION (this);
   m_downlinkChannel = 0;
   m_uplinkChannel = 0;
+  m_d2dChannel = 0;
   Object::DoDispose ();
 }
 
@@ -293,6 +312,8 @@ LteHelper::SetPathlossModelType (std::string type)
   m_dlPathlossModelFactory.SetTypeId (type);
   m_ulPathlossModelFactory = ObjectFactory ();
   m_ulPathlossModelFactory.SetTypeId (type);
+  m_d2dPathlossModelFactory = ObjectFactory ();
+  m_d2dPathlossModelFactory.SetTypeId (type);
 }
 
 void 
@@ -301,6 +322,7 @@ LteHelper::SetPathlossModelAttribute (std::string n, const AttributeValue &v)
   NS_LOG_FUNCTION (this << n);
   m_dlPathlossModelFactory.Set (n, v);
   m_ulPathlossModelFactory.Set (n, v);
+  m_d2dPathlossModelFactory.Set (n, v);
 }
 
 void
@@ -586,12 +608,16 @@ LteHelper::InstallSingleUeDevice (Ptr<Node> n)
   NS_LOG_FUNCTION (this);
   Ptr<LteSpectrumPhy> dlPhy = CreateObject<LteSpectrumPhy> ();
   Ptr<LteSpectrumPhy> ulPhy = CreateObject<LteSpectrumPhy> ();
+  Ptr<LteSpectrumPhy> d2dPhy = CreateObject<LteSpectrumPhy> ();
 
   Ptr<LteUePhy> phy = CreateObject<LteUePhy> (dlPhy, ulPhy);
+
+  phy->SetD2dSpectrumPhy(d2dPhy);
 
   Ptr<LteHarqPhy> harq = Create<LteHarqPhy> ();
   dlPhy->SetHarqPhyModule (harq);
   ulPhy->SetHarqPhyModule (harq);
+  d2dPhy->SetHarqPhyModule (harq);
   phy->SetHarqPhyModule (harq);
 
   Ptr<LteChunkProcessor> pRs = Create<LteChunkProcessor> ();
@@ -609,6 +635,22 @@ LteHelper::InstallSingleUeDevice (Ptr<Node> n)
   Ptr<LteChunkProcessor> pData = Create<LteChunkProcessor> ();
   pData->AddCallback (MakeCallback (&LteSpectrumPhy::UpdateSinrPerceived, dlPhy));
   dlPhy->AddDataSinrChunkProcessor (pData);
+
+  Ptr<LteChunkProcessor> pD2dRs = Create<LteChunkProcessor> ();
+  pRs->AddCallback (MakeCallback (&LteUePhy::ReportRsReceivedPower, phy));
+  d2dPhy->AddRsPowerChunkProcessor (pRs);
+
+  Ptr<LteChunkProcessor> pD2dInterf = Create<LteChunkProcessor> ();
+  pD2dInterf->AddCallback (MakeCallback (&LteUePhy::ReportInterference, phy));
+  d2dPhy->AddInterferenceCtrlChunkProcessor (pD2dInterf); // for RSRQ evaluation of UE Measurements
+
+  Ptr<LteChunkProcessor> pD2dCtrl = Create<LteChunkProcessor> ();
+  pD2dCtrl->AddCallback (MakeCallback (&LteSpectrumPhy::UpdateSinrPerceived, d2dPhy));
+  d2dPhy->AddCtrlSinrChunkProcessor (pD2dCtrl);
+
+  Ptr<LteChunkProcessor> pD2dData = Create<LteChunkProcessor> ();
+  pD2dData->AddCallback (MakeCallback (&LteSpectrumPhy::UpdateSinrPerceived, d2dPhy));
+  d2dPhy->AddDataSinrChunkProcessor (pD2dData);
 
   if (m_usePdschForCqiGeneration)
     {
@@ -628,16 +670,19 @@ LteHelper::InstallSingleUeDevice (Ptr<Node> n)
 
   dlPhy->SetChannel (m_downlinkChannel);
   ulPhy->SetChannel (m_uplinkChannel);
+  d2dPhy->SetChannel (m_d2dChannel);
 
   Ptr<MobilityModel> mm = n->GetObject<MobilityModel> ();
   NS_ASSERT_MSG (mm, "MobilityModel needs to be set on node before calling LteHelper::InstallUeDevice ()");
   dlPhy->SetMobility (mm);
   ulPhy->SetMobility (mm);
+  d2dPhy->SetMobility (mm);
 
   Ptr<AntennaModel> antenna = (m_ueAntennaModelFactory.Create ())->GetObject<AntennaModel> ();
   NS_ASSERT_MSG (antenna, "error in creating the AntennaModel object");
   dlPhy->SetAntenna (antenna);
   ulPhy->SetAntenna (antenna);
+  d2dPhy->SetAntenna (antenna);
 
   Ptr<LteUeMac> mac = CreateObject<LteUeMac> ();
   Ptr<LteUeRrc> rrc = CreateObject<LteUeRrc> ();
@@ -692,6 +737,7 @@ LteHelper::InstallSingleUeDevice (Ptr<Node> n)
   phy->SetDevice (dev);
   dlPhy->SetDevice (dev);
   ulPhy->SetDevice (dev);
+  d2dPhy->SetDevice (dev);
   nas->SetDevice (dev);
 
   n->AddDevice (dev);

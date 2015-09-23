@@ -642,10 +642,14 @@ private:
   Ptr<SpectrumChannel> m_downlinkChannel;
   /// The uplink LTE channel used in the simulation.
   Ptr<SpectrumChannel> m_uplinkChannel;
+  /// The d2d LTE channel used in the simulation.
+  Ptr<SpectrumChannel> m_d2dChannel;
   /// The path loss model used in the downlink channel.
   Ptr<Object> m_downlinkPathlossModel;
   /// The path loss model used in the uplink channel.
   Ptr<Object> m_uplinkPathlossModel;
+  /// The path loss model used in the d2d channel.
+  Ptr<Object> m_d2dPathlossModel;
 
   /// Factory of MAC scheduler object.
   ObjectFactory m_schedulerFactory;
@@ -665,6 +669,8 @@ private:
   ObjectFactory m_dlPathlossModelFactory;
   /// Factory of path loss model object for the uplink channel.
   ObjectFactory m_ulPathlossModelFactory;
+  /// Factory of path loss model object for the d2d channel.
+  ObjectFactory m_d2dPathlossModelFactory;
   /// Factory of both the downlink and uplink LTE channels.
   ObjectFactory m_channelFactory;
 
