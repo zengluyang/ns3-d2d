@@ -782,6 +782,7 @@ LteEnbPhy::SendControlChannels (std::list<Ptr<LteControlMessage> > ctrlMsgList)
       pss = true;
     }
   m_downlinkSpectrumPhy->StartTxDlCtrlFrame (ctrlMsgList, pss);
+  //std::cout<<" m_downlinkSpectrumPhy->StartTxDlCtrlFrame (ctrlMsgList, pss); "<<this<<std::endl;
 
 }
 
@@ -795,6 +796,7 @@ LteEnbPhy::SendDataChannels (Ptr<PacketBurst> pb)
   std::list<Ptr<LteControlMessage> > ctrlMsgList;
   ctrlMsgList.clear ();
   m_downlinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsgList, DL_DATA_DURATION);
+  std::cout<<" m_downlinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsgList, DL_DATA_DURATION); "<<this<<std::endl; 
 }
 
 

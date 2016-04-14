@@ -426,7 +426,7 @@ LteSpectrumPhy::StartTxDataFrame (Ptr<PacketBurst> pb, std::list<Ptr<LteControlM
   NS_LOG_LOGIC (this << " state: " << m_state);
   
   m_phyTxStartTrace (pb);
-  m_state=IDLE;
+  //m_state=IDLE;
   switch (m_state)
     {
     case RX_DATA:

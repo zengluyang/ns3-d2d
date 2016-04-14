@@ -1245,6 +1245,7 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
               SetSubChannelsForTransmission (dlRb);
               NS_LOG_INFO(" dlRb.size()  "<<dlRb.size());
               m_uplinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION);
+              //std::cout<<" m_uplinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION); "<<this<<std::endl;
               //m_d2dlinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION);
             }
           else
@@ -1260,8 +1261,8 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
         if(m_ueId==subframeNo) {
           d2dPacket->AddPacketTag(tag);
           d2dPb->AddPacket(d2dPacket);
-          m_d2dlinkSpectrumPhy->StartTxDataFrame (d2dPb, ctrlMsg, UL_DATA_DURATION);
-          std::cout<<"send to d2d "<<this<<" "<<m_ueId<<" "<<subframeNo<<std::endl;
+          //m_d2dlinkSpectrumPhy->StartTxDataFrame (d2dPb, ctrlMsg, UL_DATA_DURATION);
+          //std::cout<<"send to d2d "<<this<<" "<<m_ueId<<" "<<subframeNo<<std::endl;
         }
 
     }  // m_configured
