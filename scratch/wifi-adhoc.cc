@@ -161,7 +161,7 @@ int main (int argc, char *argv[])
   MobilityHelper mobility;
   Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
   positionAlloc->Add (Vector (0.0, 0.0, 0.0));
-  positionAlloc->Add (Vector (162.0, 0.0, 0.0));
+  positionAlloc->Add (Vector (162.0, 0.0, 0.0));//162.0 is the threshold and 163.0 the phy will stop recv_ing packets.
   mobility.SetPositionAllocator (positionAlloc);
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (c);
