@@ -107,6 +107,7 @@ LteRlcUm::DoTransmitPdcpPdu (Ptr<Packet> p)
   else
     {
       // Discard full RLC SDU
+      std::cout<<("UM TxBuffer is full. RLC SDU discarded")<<std::endl;
       NS_LOG_LOGIC ("TxBuffer is full. RLC SDU discarded");
       NS_LOG_LOGIC ("MaxTxBufferSize = " << m_maxTxBufferSize);
       NS_LOG_LOGIC ("txBufferSize    = " << m_txBufferSize);

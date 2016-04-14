@@ -214,6 +214,7 @@ EpcUeNas::Send (Ptr<Packet> packet)
         uint32_t id = m_tftClassifier.Classify (packet, EpcTft::UPLINK);
         NS_ASSERT ((id & 0xFFFFFF00) == 0);
         uint8_t bid = (uint8_t) (id & 0x000000FF);
+        std::cout<<" EpcUeNas::Send() bid: "<<(int)bid<<std::endl;
         if (bid == 0)
           {
             return false;

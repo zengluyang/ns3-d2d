@@ -57,6 +57,7 @@
 #include "ns3/config-store-module.h"
 #include "ns3/wifi-module.h"
 #include "ns3/internet-module.h"
+#include "ns3/evalvid-client-server-helper.h"
 
 #include <iostream>
 #include <fstream>
@@ -75,20 +76,20 @@ void ReceivePacket (Ptr<Socket> socket)
     }
 }
 
-static void GenerateTraffic (Ptr<Socket> socket, uint32_t pktSize, 
-                             uint32_t pktCount, Time pktInterval )
-{
-  if (pktCount > 0)
-    {
-      socket->Send (Create<Packet> (pktSize));
-      Simulator::Schedule (pktInterval, &GenerateTraffic, 
-                           socket, pktSize,pktCount-1, pktInterval);
-    }
-  else
-    {
-      socket->Close ();
-    }
-}
+// static void GenerateTraffic (Ptr<Socket> socket, uint32_t pktSize, 
+//                              uint32_t pktCount, Time pktInterval )
+// {
+//   if (pktCount > 0)
+//     {
+//       socket->Send (Create<Packet> (pktSize));
+//       Simulator::Schedule (pktInterval, &GenerateTraffic, 
+//                            socket, pktSize,pktCount-1, pktInterval);
+//     }
+//   else
+//     {
+//       socket->Close ();
+//     }
+// }
 
 
 int main (int argc, char *argv[])
@@ -174,26 +175,46 @@ int main (int argc, char *argv[])
   ipv4.SetBase ("10.1.1.0", "255.255.255.0");
   Ipv4InterfaceContainer i = ipv4.Assign (devices);
 
-  TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
-  Ptr<Socket> recvSink = Socket::CreateSocket (c.Get (0), tid);
-  InetSocketAddress local = InetSocketAddress (Ipv4Address::GetAny (), 80);
-  recvSink->Bind (local);
-  recvSink->SetRecvCallback (MakeCallback (&ReceivePacket));
 
-  Ptr<Socket> source = Socket::CreateSocket (c.Get (1), tid);
-  InetSocketAddress remote = InetSocketAddress (Ipv4Address ("255.255.255.255"), 80);
-  source->SetAllowBroadcast (true);
-  source->Connect (remote);
+  LogComponentEnable ("EvalvidClient", LOG_LEVEL_INFO);
+  LogComponentEnable ("EvalvidServer", LOG_LEVEL_INFO);
+
+  uint16_t port = 8000;
+
+  EvalvidServerHelper server(port);
+  server.SetAttribute ("SenderTraceFilename", StringValue("st_highway_cif.st"));
+  server.SetAttribute ("SenderDumpFilename", StringValue("sd_a01_lte"));
+  ApplicationContainer apps = server.Install(c.Get(0));  
+  apps.Start (Seconds (1.0));
+  apps.Stop (Seconds (101.0));
+
+  EvalvidClientHelper client (i.GetAddress (0),port);
+  client.SetAttribute ("ReceiverDumpFilename", StringValue("rd_a01_lte"));
+  apps = client.Install (c.Get(1));
+  apps.Start (Seconds (2.0));
+  apps.Stop (Seconds (90.0));
+
+
+  // TypeId tid = TypeId::LookupByName ("ns3::UdpSocketFactory");
+  // Ptr<Socket> recvSink = Socket::CreateSocket (c.Get (0), tid);
+  // InetSocketAddress local = InetSocketAddress (Ipv4Address::GetAny (), 80);
+  // recvSink->Bind (local);
+  // recvSink->SetRecvCallback (MakeCallback (&ReceivePacket));
+
+  // Ptr<Socket> source = Socket::CreateSocket (c.Get (1), tid);
+  // InetSocketAddress remote = InetSocketAddress (Ipv4Address ("255.255.255.255"), 80);
+  // source->SetAllowBroadcast (true);
+  // source->Connect (remote);
 
   // Tracing
   wifiPhy.EnablePcap ("wifi-simple-adhoc", devices);
 
   // Output what we are doing
-  NS_LOG_UNCOND ("Testing " << numPackets  << " packets sent with receiver rss " << rss );
+  // NS_LOG_UNCOND ("Testing " << numPackets  << " packets sent with receiver rss " << rss );
 
-  Simulator::ScheduleWithContext (source->GetNode ()->GetId (),
-                                  Seconds (1.0), &GenerateTraffic, 
-                                  source, packetSize, numPackets, interPacketInterval);
+  // Simulator::ScheduleWithContext (source->GetNode ()->GetId (),
+  //                                 Seconds (1.0), &GenerateTraffic, 
+  //                                 source, packetSize, numPackets, interPacketInterval);
 
   Simulator::Run ();
   Simulator::Destroy ();
