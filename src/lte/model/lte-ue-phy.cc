@@ -37,11 +37,12 @@
 #include "lte-ue-mac.h"
 #include "ff-mac-common.h"
 #include "lte-chunk-processor.h"
+#include "lte-phy-tag.h"
 #include <ns3/lte-common.h>
 #include <ns3/pointer.h>
 #include <ns3/boolean.h>
 #include <ns3/lte-ue-power-control.h>
-
+#include <ns3/socket.h>
 
 #include <iostream>
 #include <sstream>
@@ -306,10 +307,13 @@ LteUePhy::GetTypeId (void)
   return tid;
 }
 
+int LteUePhy::m_ueCount = 0;
+
 void
 LteUePhy::DoInitialize ()
 {
   NS_LOG_FUNCTION (this);
+  m_ueId = m_ueCount++;
   bool haveNodeId = false;
   uint32_t nodeId = 0;
   if (m_netDevice != 0)
@@ -434,7 +438,17 @@ void
 LteUePhy::PhyPduReceived (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this<<(*p));
+  std::cout<<"PhyPduReceived "<<p<<" "<<std::endl;
   m_uePhySapUser->ReceivePhyPdu (p);
+}
+
+void
+LteUePhy::PhyPduD2dReceived (Ptr<Packet> p)
+{
+  NS_LOG_FUNCTION (this<<(*p));
+  LtePhyTag tag;
+  p->PeekPacketTag(tag);
+  std::cout<<"PhyPduD2dReceived "<<p<<" "<<m_rnti<<" "<<(int)tag.GetCellId()<<std::endl;
 }
 
 void
@@ -1160,17 +1174,18 @@ void
 LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
 {
   NS_LOG_FUNCTION (this << frameNo << subframeNo);
-
+  std::cout<<" LteUePhy::SubframeIndication rfs "<<m_rnti<<" "<<frameNo<<" "<<subframeNo<<std::endl;
   NS_ASSERT_MSG (frameNo > 0, "the SRS index check code assumes that frameNo starts at 1");
 
   // refresh internal variables
   m_rsReceivedPowerUpdated = false;
   m_rsInterferencePowerUpdated = false;
   m_pssReceived = false;
-  std::vector<int> d2dRb(25,0);
-  for(unsigned int i=0;i<d2dRb.size();i++) {
-    d2dRb[i]=i;
-  }
+  std::vector<int> d2dRb(1,0);
+  // for(unsigned int i=0;i<d2dRb.size();i++) {
+  //   d2dRb[i]=i;
+  // }
+  d2dRb[0]=m_rnti;
   SetSubChannelsForD2dTransmission(d2dRb);
   SetSubChannelsForD2dReception(d2dRb);
   if (m_ulConfigured)
@@ -1212,7 +1227,7 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
               SetSubChannelsForTransmission (rbMask);
             }
           m_uplinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION);
-          //m_d2dlinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION);
+          std::cout<<" m_uplinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION); "<<this<<std::endl;
         }
       else
         {
@@ -1230,13 +1245,25 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
               SetSubChannelsForTransmission (dlRb);
               NS_LOG_INFO(" dlRb.size()  "<<dlRb.size());
               m_uplinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION);
-             // m_d2dlinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION);
+              //m_d2dlinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION);
             }
           else
             {
               NS_LOG_LOGIC (this << " UE - UL NOTHING TO SEND");
             }
         }
+
+        Ptr<PacketBurst> d2dPb = CreateObject<PacketBurst>();
+        Ptr<Packet> d2dPacket = Create<Packet>(reinterpret_cast<const uint8_t*> ("hello"), 5);
+        LtePhyTag tag(m_ueId);
+        //tag.m_cellId(m_rnti);
+        if(m_ueId==subframeNo) {
+          d2dPacket->AddPacketTag(tag);
+          d2dPb->AddPacket(d2dPacket);
+          m_d2dlinkSpectrumPhy->StartTxDataFrame (d2dPb, ctrlMsg, UL_DATA_DURATION);
+          std::cout<<"send to d2d "<<this<<" "<<m_ueId<<" "<<subframeNo<<std::endl;
+        }
+
     }  // m_configured
 
   // trigger the MAC

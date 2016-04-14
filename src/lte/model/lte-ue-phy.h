@@ -214,6 +214,7 @@ public:
    */
   void PhyPduReceived (Ptr<Packet> p);
 
+  void PhyPduD2dReceived (Ptr<Packet> p);
 
   /**
   * \brief trigger from eNB the start from a new frame
@@ -278,6 +279,8 @@ public:
   typedef void (* RsrpRsrqTracedCallback)
     (uint16_t rnti, uint16_t cellId, double rsrp, double rsrq,
      bool isServingCell);
+
+  int m_ueId;
 
 private:
 
@@ -488,6 +491,7 @@ private:
   Ptr<SpectrumValue> m_noisePsd; ///< Noise power spectral density for
                                  ///the configured bandwidth 
   Ptr<LteSpectrumPhy> m_d2dlinkSpectrumPhy;
+  static int m_ueCount;
 
 }; // end of `class LteUePhy`
 
