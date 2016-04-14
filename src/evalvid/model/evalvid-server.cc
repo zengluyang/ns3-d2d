@@ -168,6 +168,7 @@ EvalvidServer::Setup()
       videoInfoStruct->frameSize = frameSize;
       videoInfoStruct->numOfUdpPackets = numOfUdpPackets;
       videoInfoStruct->packetInterval = Seconds(sendTime - lastSendTime);
+      //videoInfoStruct->packetInterval = Time(0);
       m_videoInfoMap.insert (pair<uint32_t, m_videoInfoStruct_t*>(frameId, videoInfoStruct));
       NS_LOG_LOGIC(">> EvalvidServer: " << frameId << "\t" << frameType << "\t" <<
                                 frameSize << "\t" << numOfUdpPackets << "\t" << sendTime);

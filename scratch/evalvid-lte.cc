@@ -156,7 +156,7 @@ main (int argc, char *argv[])
   
 
   NS_LOG_INFO ("Run Simulation.");
-  Simulator::Stop(Seconds(20.4));
+  Simulator::Stop(Seconds(101.4));
   Simulator::Run ();         
   Simulator::Destroy ();
   std::cerr<<"ueIpIface.GetN() "<<ueIpIface.GetN()<<std::endl;

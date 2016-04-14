@@ -1227,7 +1227,7 @@ LteUePhy::SubframeIndication (uint32_t frameNo, uint32_t subframeNo)
               SetSubChannelsForTransmission (rbMask);
             }
           m_uplinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION);
-          std::cout<<" m_uplinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION); "<<this<<std::endl;
+          std::cout<<" m_uplinkSpectrumPhy->StartTxDataFrame (pb, ctrlMsg, UL_DATA_DURATION); "<<" "<<(*pb->Begin())->GetSize()<<" "<<this<<std::endl;
         }
       else
         {
