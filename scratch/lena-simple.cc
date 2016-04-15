@@ -47,6 +47,13 @@ int main (int argc, char *argv[])
   cmd.Parse (argc, argv);
 
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
+  
+  lteHelper->SetFadingModel("ns3::TraceFadingLossModel");
+  lteHelper->SetFadingModelAttribute ("TraceFilename", StringValue ("src/lte/model/fading-traces/fading_trace_EPA_3kmph.fad"));
+  lteHelper->SetFadingModelAttribute ("TraceLength", TimeValue (Seconds (10.0)));
+  lteHelper->SetFadingModelAttribute ("SamplesNum", UintegerValue (10000));
+  lteHelper->SetFadingModelAttribute ("WindowSize", TimeValue (Seconds (0.5)));
+  lteHelper->SetFadingModelAttribute ("RbNum", UintegerValue (100));
 
   // Uncomment to enable logging
 //  lteHelper->EnableLogComponents ();
