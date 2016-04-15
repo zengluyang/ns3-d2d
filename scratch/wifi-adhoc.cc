@@ -94,7 +94,7 @@ void ReceivePacket (Ptr<Socket> socket)
 
 int main (int argc, char *argv[])
 {
-  std::string phyMode ("DsssRate1Mbps");
+  std::string phyMode ("ErpOfdmRate54Mbps");
   double rss = -80;  // -dBm
   uint32_t packetSize = 1000; // bytes
   uint32_t numPackets = 20;
@@ -121,6 +121,7 @@ int main (int argc, char *argv[])
   // Fix non-unicast data rate to be the same as that of unicast
   Config::SetDefault ("ns3::WifiRemoteStationManager::NonUnicastMode", 
                       StringValue (phyMode));
+  Config::SetDefault("ns3::WifiMacQueue::MaxPacketNumber",UintegerValue(10000));
 
   NodeContainer c;
   c.Create (2);
@@ -131,12 +132,12 @@ int main (int argc, char *argv[])
     {
       wifi.EnableLogComponents ();  // Turn on all Wifi logging
     }
-  wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
+  wifi.SetStandard (WIFI_PHY_STANDARD_80211g);
 
   YansWifiPhyHelper wifiPhy =  YansWifiPhyHelper::Default ();
   // This is one parameter that matters when using FixedRssLossModel
   // set it to zero; otherwise, gain will be added
-  wifiPhy.Set ("RxGain", DoubleValue (0) ); 
+  // wifiPhy.Set ("RxGain", DoubleValue (100) ); 
   // ns-3 supports RadioTap and Prism tracing extensions for 802.11b
   wifiPhy.SetPcapDataLinkType (YansWifiPhyHelper::DLT_IEEE802_11_RADIO); 
 
@@ -144,7 +145,7 @@ int main (int argc, char *argv[])
   wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
   // The below FixedRssLossModel will cause the rss to be fixed regardless
   // of the distance between the two stations, and the transmit power
-  // wifiChannel.AddPropagationLoss ("ns3::FixedRssLossModel","Rss",DoubleValue (rss));
+  //wifiChannel.AddPropagationLoss ("ns3::FixedRssLossModel","Rss",DoubleValue (rss));
   wifiChannel.AddPropagationLoss ("ns3::LogDistancePropagationLossModel");
   wifiPhy.SetChannel (wifiChannel.Create ());
 
@@ -162,7 +163,7 @@ int main (int argc, char *argv[])
   MobilityHelper mobility;
   Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
   positionAlloc->Add (Vector (0.0, 0.0, 0.0));
-  positionAlloc->Add (Vector (162.0, 0.0, 0.0));//162.0 is the threshold and 163.0 the phy will stop recv_ing packets.
+  positionAlloc->Add (Vector (5.0, 0.0, 0.0));//162.0 is the threshold and 163.0 the phy will stop recv_ing packets.
   mobility.SetPositionAllocator (positionAlloc);
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (c);
