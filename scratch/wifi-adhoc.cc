@@ -95,6 +95,8 @@ void ReceivePacket (Ptr<Socket> socket)
 int main (int argc, char *argv[])
 {
   std::string phyMode ("ErpOfdmRate54Mbps");
+  //datarate, if you want to get the list of all avalaible datarates. 
+  //set it to "111" and the run the program,it will print the list of avalaible datarates.
   double rss = -80;  // -dBm
   uint32_t packetSize = 1000; // bytes
   uint32_t numPackets = 20;
@@ -121,7 +123,7 @@ int main (int argc, char *argv[])
   // Fix non-unicast data rate to be the same as that of unicast
   Config::SetDefault ("ns3::WifiRemoteStationManager::NonUnicastMode", 
                       StringValue (phyMode));
-  Config::SetDefault("ns3::WifiMacQueue::MaxPacketNumber",UintegerValue(10000));
+  Config::SetDefault("ns3::WifiMacQueue::MaxPacketNumber",UintegerValue(10000));// max queue size ,important!
 
   NodeContainer c;
   c.Create (2);
